@@ -347,7 +347,7 @@ if make_6_gifs:
     tau_min = min(v for v in PARTICLE_LIFETIMES_S.values() if np.isfinite(v))
     gifs_6 = []
     prog_6 = st.progress(0, text="Генерация 3D-лент для 6 частиц...")
-        cross_media = st.session_state.get("cross_media", {})
+    cross_media = st.session_state.get("cross_media", {})
 
         for idx, (p_name, (m_p, n_p), m_targ, r_targ) in enumerate(FOUND_PARTICLES_BENCHMARK):
             tau_p = float(PARTICLE_LIFETIMES_S.get(p_name, 1e-20))
