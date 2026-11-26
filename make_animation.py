@@ -84,7 +84,7 @@ def build_vortex_time_animation(psi, grid, azim_deg=45.0, elev_deg=25.0, zoom=1.
     )
     return fig
 
-def build_snapshot_history_pngs(psi, grid, azim_deg=45.0, elev_deg=25.0, zoom=1.6, n_frames=16):
+def build_snapshot_history_pngs(psi, grid, azim_deg=45.0, elev_deg=25.0, zoom=1.6, n_frames=36):
     """Генерирует PNG-кадры 3D-лент (ширина B, толщина H, цвет u) с тройным крестом центра."""
     import io
     import matplotlib.pyplot as plt
@@ -116,7 +116,7 @@ def build_snapshot_history_pngs(psi, grid, azim_deg=45.0, elev_deg=25.0, zoom=1.
     return png_list
 
 
-def build_vortex_evolution_gif(psi_frames, grid, azim_deg=45.0, elev_deg=25.0, zoom=1.6, fps=10):
+def build_vortex_evolution_gif(psi_frames, grid, azim_deg=45.0, elev_deg=25.0, zoom=1.6, fps=7):
     """Собирает GIF 3D-лент (B x H, цвет u) по шагам эволюции с крестами центров до и после распада."""
     import io
     import matplotlib.pyplot as plt
@@ -154,7 +154,7 @@ def build_vortex_evolution_gif(psi_frames, grid, azim_deg=45.0, elev_deg=25.0, z
     return gif_buf.getvalue()
 
 
-def build_vortex_gif(psi, grid, azim_deg=45.0, elev_deg=25.0, zoom=1.6, n_frames=16, fps=12):
+def build_vortex_gif(psi, grid, azim_deg=45.0, elev_deg=25.0, zoom=1.6, n_frames=16, fps=8):
     """Собирает зацикленную GIF-анимацию 3D-лент B x H."""
     import io
     from PIL import Image
