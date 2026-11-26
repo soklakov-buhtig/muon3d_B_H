@@ -344,9 +344,8 @@ is_radiative = gif_bc_mode.startswith("2.")
 
 if make_6_gifs:
     k_life = float(LIFETIME_MULT_K)
+    tau_min = min(v for v in PARTICLE_LIFETIMES_S.values() if np.isfinite(v))
 
-        k_life = float(LIFETIME_MULT_K)
-        tau_min = min(v for v in PARTICLE_LIFETIMES_S.values() if np.isfinite(v))
         gifs_6 = []
         prog_6 = st.progress(0, text="Генерация 3D-лент для 6 частиц...")
         cross_media = st.session_state.get("cross_media", {})
