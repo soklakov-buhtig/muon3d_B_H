@@ -116,28 +116,45 @@ def build_snapshot_history_pngs(psi, grid, azim_deg=45.0, elev_deg=25.0, zoom=1.
     return png_list
 
 
-def build_vortex_gif(psi, grid, azim_deg=45.0, elev_deg=25.0, zoom=1.6, n_frames=16, fps=12):
-    """Собирает готовую зацикленную GIF-анимацию эволюции 3D-узла с фиксированной камеры."""
+def build_vortex_evolution_gif(psi_frames, grid, azim_deg=45.0, elev_deg=25.0, zoom=1.6, fps=10):
+    """Собирает GIF 3D-лент (B x H, цвет u) по шагам эволюции с крестами центров до и после распада."""
     import io
+    import matplotlib.pyplot as plt
     from PIL import Image
 
-    png_list = build_snapshot_history_pngs(
-        psi, grid, azim_deg=azim_deg, elev_deg=elev_deg, zoom=zoom, n_frames=n_frames
-    )
-    frames = [Image.open(io.BytesIO(b)).convert("P", palette=Image.ADAPTIVE) for b in png_list]
-    gif_buf = io.BytesIO()
-    first_frame = frames.pop(0)
-    first_frame.save(
-        gif_buf,
-        format="GIF",
-        save_all=True,
-        append_images=frames,
-        duration=int(1000 / max(int(fps), 1)),
-        loop=0,
-    )
+    L_lim = float(grid["L_half"]) / max(float(zoom), 0.3)
+    init_centers = find_vortex_centers_3d(psi_frames[0], grid)
+    pil_frames = []
+    total = len(psi_frames)
 
+    for k, psi_k in enumerate(psi_frames):
+        fig = plt.figure(figsize=(5.5, 5.0), dpi=110)
+        ax = fig.add_subplot(111, projection="3d")
+        draw_bh_ribbons_3d(ax, psi_k, grid, phase_shift=0.3 * k, init_centers=init_centers)
+        ax.set_xlim(-L_lim, L_lim)
+        ax.set_ylim(-L_lim, L_lim)
+        ax.set_zlim(-L_lim, L_lim)
+        ax.view_init(elev=float(elev_deg), azim=float(azim_deg))
+        ax.set_title(f"Шаг эволюции {k + 1}/{total}", fontsize=10)
+        ax.set_xlabel("X (fm)", fontsize=8)
+        ax.set_ylabel("Y (fm)", fontsize=8)
+        ax.set_zlabel("Z (fm)", fontsize=8)
+        plt.tight_layout()
+        buf = io.BytesIO()
+        fig.savefig(buf, format="png")
+        plt.close(fig)
+        buf.seek(0)
+        pil_frames.append(Image.open(buf).convert("P", palette=Image.ADAPTIVE))
+
+    gif_buf = io.BytesIO()
+    first = pil_frames.pop(0)
+    first.save(gif_buf, format="GIF", save_all=True, append_images=pil_frames,
+               duration=int(1000 / max(int(fps), 1)), loop=0)
     gif_buf.seek(0)
     return gif_buf.getvalue()
+
+
+
 def build_vortex_evolution_gif(psi_frames, grid, azim_deg=45.0, elev_deg=25.0, zoom=1.6, fps=10):
     """Собирает GIF из реальных временных срезов psi_frames (эволюция / распад вихря)."""
     import io
