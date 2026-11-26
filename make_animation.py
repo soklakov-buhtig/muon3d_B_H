@@ -172,3 +172,18 @@ def build_vortex_gif(psi, grid, azim_deg=45.0, elev_deg=25.0, zoom=1.6, n_frames
     gif_buf.seek(0)
     return gif_buf.getvalue()
 
+def render_six_particles_gifs(benchmark, lifetimes_s, k_life, r_e_fm, n_grid, max_steps, medium, cross_media, is_radiative, n_frames, azim_deg, elev_deg, zoom_val, prog_bar):
+    from preprocessor import build_3d_grid, init_hopf_vortex_3d
+    from solution import relax_vortex_3d
+
+    tau_min = min(v for v in lifetimes_s.values() if np.isfinite(v))
+    gifs_6 = []
+    for idx, (p_name, (m_p, n_p), _, _) in enumerate(benchmark):
+        tau_p = float(lifetimes_s.get(p_name, 1e-20))
+        if np.isfinite(tau_p):
+            steps_p = int(np.clip(180 * ((k_life * tau_p / tau_min) ** 0.06), 180, 900))
+            tau_lbl = f"T={k_life:.0f}τ ({k_life * tau_p:.2e} с)"
+        else:
+            steps_p = int(np.clip(360 * (k_life / 5.0), 240, 720))
+            tau_lbl = f"T={k_life:.0f}τ_ref (стабилен)"
+        prog_bar.progress(idx / 6.0, text=f"Расчёт и рендер GIF ({idx + 1}/6): {p_name} ({m_p}, {n_p}) | {tau_lbl}...")
