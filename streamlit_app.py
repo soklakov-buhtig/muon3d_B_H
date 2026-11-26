@@ -343,45 +343,15 @@ gif_bc_mode = st.radio(
 is_radiative = gif_bc_mode.startswith("2.")
 
 if make_6_gifs:
-    k_life = float(LIFETIME_MULT_K)
-    tau_min = min(v for v in PARTICLE_LIFETIMES_S.values() if np.isfinite(v))
-    gifs_6 = []
     prog_6 = st.progress(0, text="Генерация 3D-лент для 6 частиц...")
-    cross_media = st.session_state.get("cross_media", {})
+    st.session_state["vortex_gifs_6"] = render_six_particles_gifs(
+        FOUND_PARTICLES_BENCHMARK, PARTICLE_LIFETIMES_S, float(LIFETIME_MULT_K),
+        R_E_COMPTON_FM, N_grid, max_steps, medium, st.session_state.get("cross_media", {}),
+        is_radiative, int(n_snap_frames), azim_deg, elev_deg, zoom_val, prog_6,
+    )
 
-    for idx, (p_name, (m_p, n_p), m_targ, r_targ) in enumerate(FOUND_PARTICLES_BENCHMARK):
 
-            tau_p = float(PARTICLE_LIFETIMES_S.get(p_name, 1e-20))
-        if np.isfinite(tau_p):
-                steps_p = int(np.clip(180 * ((k_life * tau_p / tau_min) ** 0.06), 180, 900))
-                tau_lbl = f"T={k_life:.0f}τ ({k_life * tau_p:.2e} с)"
-            else:
-                steps_p = int(np.clip(360 * (k_life / 5.0), 240, 720))
-                tau_lbl = f"T={k_life:.0f}τ_ref (стабилен)"
-        prog_6.progress(idx / 6.0, text=f"Расчёт и рендер GIF ({idx + 1}/6): {p_name} ({m_p}, {n_p}) | {tau_lbl}...")
-        scale_r = (2.0 * 3.0) / max(float(m_p * n_p), 1.0)
-        r0_p = float(R_E_COMPTON_FM) * scale_r
-        N_eff = min(max(int(N_grid), int(2 * max(abs(m_p), abs(n_p)))), 48)
-        grid_p = build_3d_grid(r0_p, N=N_eff, box_scale=5.5 if is_radiative else 3.2)
-        psi0_p = init_hopf_vortex_3d(grid_p, r0_p, r0_p * 0.30, int(m_p), int(n_p))
-        res_p = relax_vortex_3d(
-            psi0_p, grid_p, cross_media.get(p_name, medium),
-            max_steps=steps_p if is_radiative else min(int(max_steps), 150),
-            renormalize=False, damping_coeff=0.0 if is_radiative else 0.02,
-            bc_mode="radiative" if is_radiative else "confined",
-            record_frames=int(n_snap_frames) if is_radiative else 0,
-            stop_on_buckling=not is_radiative,
-        )
-        # Условная сборка GIF-анимации в зависимости от radiative-режима и сохранение в список
-        gif_b = (
-            build_vortex_evolution_gif(res_p["psi_frames"], grid_p, azim_deg=azim_deg, elev_deg=elev_deg, zoom=zoom_val)
-            if is_radiative and len(res_p.get("psi_frames", [])) >= 2
-            else build_vortex_gif(res_p["psi"], grid_p, azim_deg=azim_deg, elev_deg=elev_deg, zoom=zoom_val, n_frames=int(n_snap_frames))
-        )
-        gifs_6.append((f"{p_name} [{tau_lbl}]", f"({m_p}, {n_p})", gif_b))
 
-    prog_6.progress(1.0, text="Все 6 GIF-анимаций готовы!")
-    st.session_state["vortex_gifs_6"] = gifs_6
 if "vortex_gifs_6" in st.session_state:
     st.subheader("Динамика 6 найденных частиц")
     cols_6 = st.columns(3)
