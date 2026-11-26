@@ -345,7 +345,9 @@ if make_6_gifs:
 
     
     for idx, (p_name, (m_p, n_p), m_targ, r_targ) in enumerate(FOUND_PARTICLES_BENCHMARK):
-        prog_6.progress(idx / 6.0, text=f"Расчёт и рендер GIF ({idx + 1}/6): {p_name} ({m_p}, {n_p})...")
+#        prog_6.progress(idx / 6.0, text=f"Расчёт и рендер GIF ({idx + 1}/6): {p_name} ({m_p}, {n_p})...")
+        prog_6.progress(idx / 6.0, text=f"Расчёт и рендер GIF ({idx + 1}/6): {p_name} ({m_p}, {n_p}) | {tau_lbl}...")
+
         scale_r = (2.0 * 3.0) / max(float(m_p * n_p), 1.0)
         r0_p = float(R_E_COMPTON_FM) * scale_r
         N_eff = min(max(int(N_grid), int(2 * max(abs(m_p), abs(n_p)))), 48)
@@ -357,7 +359,9 @@ if make_6_gifs:
 
         res_p = relax_vortex_3d(
             psi0_p, grid_p, med_p,
-            max_steps=600 if is_radiative else min(int(max_steps), 150),
+#            max_steps=600 if is_radiative else min(int(max_steps), 150),
+            max_steps=steps_p if is_radiative else min(int(max_steps), 150),
+
 
             renormalize=False,
             damping_coeff=0.0 if is_radiative else 0.02,
