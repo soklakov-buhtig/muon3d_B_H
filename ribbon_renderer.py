@@ -129,6 +129,8 @@ def draw_bh_ribbons_3d(ax, psi, grid, phase_shift=0.0, init_centers=None, n_ribb
             traj[:, s, :] = np.clip(p + ds * v2, -0.95 * L_half, 0.95 * L_half)
 
         cmap = cm.get_cmap("turbo")
+
+ #       cmap = cm.get_cmap("turbo")
         norm_c = colors.Normalize(vmin=0.05 * u_max, vmax=u_max)
         polys, face_colors = [], []
 
