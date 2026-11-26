@@ -35,12 +35,6 @@ from postprocessor import analyze_relaxed_vortex_3d
 #from make_animation import build_vortex_time_animation, build_snapshot_history_pngs
 #from make_animation import build_vortex_time_animation, build_vortex_gif
 
-from make_animation import (
-    build_vortex_time_animation,
-    build_vortex_gif,
-    build_vortex_evolution_gif,
-)
-
 
 
 st.set_page_config(page_title="Muon 3D Vortex Solver", layout="wide")
