@@ -7,6 +7,12 @@ from constants import (
     R_E_COMPTON_FM, R_MU_COMPTON_FM,
     LIFETIME_MULT_K, PARTICLE_LIFETIMES_S,
 )
+from make_animation import (
+    build_vortex_time_animation,
+    build_vortex_gif,
+    build_vortex_evolution_gif,
+    render_six_particles_gifs,
+)
 
 
 #from calibrate_medium import calibrate_single_and_scan_spectrum
