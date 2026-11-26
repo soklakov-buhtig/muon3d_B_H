@@ -1,5 +1,6 @@
 import numpy as np
 import plotly.graph_objects as go
+from ribbon_renderer import draw_bh_ribbons_3d, find_vortex_centers_3d
 
 
 def build_vortex_time_animation(psi, grid, azim_deg=45.0, elev_deg=25.0, zoom=1.6, phase_t=0.0, time_label=""):
