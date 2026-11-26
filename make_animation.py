@@ -187,12 +187,23 @@ def render_six_particles_gifs(benchmark, lifetimes_s, k_life, r_e_fm, n_grid, ma
             steps_p = int(np.clip(360 * (k_life / 5.0), 240, 720))
             tau_lbl = f"T={k_life:.0f}τ_ref (стабилен)"
         prog_bar.progress(idx / 6.0, text=f"Расчёт и рендер GIF ({idx + 1}/6): {p_name} ({m_p}, {n_p}) | {tau_lbl}...")
-        # Сокращенный блок расчёта сетки и 3D-релаксации (полный код смотрите в исходных материалах)
         scale_r = (2.0 * 3.0) / max(float(m_p * n_p), 1.0)
+        r0_p = float(r_e_fm) * scale_r
         N_eff = min(max(int(n_grid), int(2 * max(abs(m_p), abs(n_p)))), 48)
-        grid_p = build_3d_grid(float(r_e_fm) * scale_r, N=N_eff, box_scale=5.5 if is_radiative else 3.2)
-        res_p = relax_vortex_3d(init_hopf_vortex_3d(grid_p, ...), grid_p, ...)
-        gif_b = build_vortex_evolution_gif(...) if is_radiative and len(res_p.get("psi_frames", [])) >= 2 else build_vortex_gif(...)
+        grid_p = build_3d_grid(r0_p, N=N_eff, box_scale=5.5 if is_radiative else 3.2)
+        psi0_p = init_hopf_vortex_3d(grid_p, r0_p, r0_p * 0.30, int(m_p), int(n_p))
+        res_p = relax_vortex_3d(
+            psi0_p, grid_p, cross_media.get(p_name, medium),
+            max_steps=steps_p if is_radiative else min(int(max_steps), 150),
+            renormalize=False, damping_coeff=0.0 if is_radiative else 0.02,
+            bc_mode="radiative" if is_radiative else "confined",
+            record_frames=int(n_frames) if is_radiative else 0,
+            stop_on_buckling=not is_radiative,
+        )
+        if is_radiative and len(res_p.get("psi_frames", [])) >= 2:
+            gif_b = build_vortex_evolution_gif(res_p["psi_frames"], grid_p, azim_deg=azim_deg, elev_deg=elev_deg, zoom=zoom_val)
+        else:
+            gif_b = build_vortex_gif(res_p["psi"], grid_p, azim_deg=azim_deg, elev_deg=elev_deg, zoom=zoom_val, n_frames=int(n_frames))
         gifs_6.append((f"{p_name} [{tau_lbl}]", f"({m_p}, {n_p})", gif_b))
 
     prog_bar.progress(1.0, text="Все 6 GIF-анимаций готовы!")
