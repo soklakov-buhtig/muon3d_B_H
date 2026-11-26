@@ -89,3 +89,95 @@ def draw_triple_cross_3d(ax, center, arm_len, color="black", lw=1.6, ls="-", alp
     ax.plot([cx - L, cx + L], [cy, cy], [cz, cz], color=color, lw=lw, ls=ls, alpha=alpha, zorder=20)
     ax.plot([cx, cx], [cy - L, cy + L], [cz, cz], color=color, lw=lw, ls=ls, alpha=alpha, zorder=20)
     ax.plot([cx, cx], [cy, cy], [cz - L, cz + L], color=color, lw=lw, ls=ls, alpha=alpha, zorder=20)
+
+def draw_bh_ribbons_3d(ax, psi, grid, phase_shift=0.0, init_centers=None, n_ribbons=12, n_steps=38):
+    """
+    Рисует 3D-ленты (ширина ~ B, толщина ~ H = B/mu_r, цвет ~ плотность энергии u)
+    и тройные 3D-кресты центров вихря до и после распада.
+    """
+    X, Y, Z = grid["X"], grid["Y"], grid["Z"]
+    L_half = float(grid["L_half"])
+    dx = float(grid["dx"])
+    u, u_max, bx, by, bz, b_norm, h_norm = compute_bh_fields(psi, grid)
+
+    # Выбор стартовых точек в плотном ядре (u >= 0.45 * u_max)
+    core_idx = np.argwhere(u >= 0.45 * u_max)
+    if len(core_idx) == 0:
+        core_idx = np.argwhere(u >= 0.15 * u_max)
+
+    if len(core_idx) > 0:
+        stride = max(1, len(core_idx) // max(int(n_ribbons), 1))
+        seeds_idx = core_idx[::stride][:int(n_ribbons)]
+        seeds = np.array([[X[i, j, k], Y[i, j, k], Z[i, j, k]] for i, j, k in seeds_idx], dtype=float)
+
+        # Трассировка силовых линий методом РК-2 вдоль поля B
+        ds = 0.65 * dx
+        traj = np.zeros((len(seeds), n_steps, 3), dtype=float)
+        traj[:, 0, :] = seeds
+        for s in range(1, n_steps):
+            p = traj[:, s - 1, :]
+            v1 = np.column_stack([_interp3d(bx, grid, p), _interp3d(by, grid, p), _interp3d(bz, grid, p)])
+            n1 = np.linalg.norm(v1, axis=1, keepdims=True)
+            v1 = np.where(n1 > 1e-12, v1 / np.maximum(n1, 1e-12), 0.0)
+            p_mid = np.clip(p + 0.5 * ds * v1, -0.95 * L_half, 0.95 * L_half)
+            v2 = np.column_stack([_interp3d(bx, grid, p_mid), _interp3d(by, grid, p_mid), _interp3d(bz, grid, p_mid)])
+            n2 = np.linalg.norm(v2, axis=1, keepdims=True)
+            v2 = np.where(n2 > 1e-12, v2 / np.maximum(n2, 1e-12), 0.0)
+            traj[:, s, :] = np.clip(p + ds * v2, -0.95 * L_half, 0.95 * L_half)
+
+        cmap = cm.get_cmap("turbo")
+        norm_c = colors.Normalize(vmin=0.05 * u_max, vmax=u_max)
+        polys, face_colors = [], []
+
+        for r_i in range(len(seeds)):
+            pts = traj[r_i]
+            u_line = _interp3d(u, grid, pts)
+            b_line = _interp3d(b_norm, grid, pts)
+            h_line = _interp3d(h_norm, grid, pts)
+
+            tang = np.gradient(pts, axis=0)
+            tang /= np.maximum(np.linalg.norm(tang, axis=1, keepdims=True), 1e-12)
+            ref = np.tile(np.array([0.0, 0.0, 1.0]), (len(pts), 1))
+            ref[np.abs(tang[:, 2]) > 0.85] = np.array([1.0, 0.0, 0.0])
+
+            n_vec = np.cross(tang, ref)
+            n_vec /= np.maximum(np.linalg.norm(n_vec, axis=1, keepdims=True), 1e-12)
+            b_vec = np.cross(tang, n_vec)
+
+            # Перекрут сечения (ширина ~ B по n_vec, толщина ~ H по b_vec)
+            twist = 0.25 * np.arange(len(pts)) + float(phase_shift)
+            e1 = np.cos(twist)[:, None] * n_vec + np.sin(twist)[:, None] * b_vec
+            e2 = -np.sin(twist)[:, None] * n_vec + np.cos(twist)[:, None] * b_vec
+
+            w_half = (0.35 + 1.15 * b_line)[:, None] * dx
+            t_half = (0.18 + 0.75 * h_line)[:, None] * dx
+
+            p_top_l = pts - w_half * e1 + t_half * e2
+            p_top_r = pts + w_half * e1 + t_half * e2
+            p_bot_r = pts + w_half * e1 - t_half * e2
+            p_bot_l = pts - w_half * e1 - t_half * e2
+
+            for s in range(len(pts) - 1):
+                if u_line[s] < 0.04 * u_max:
+                    continue
+                col = cmap(norm_c(u_line[s]))
+                # Верхняя, нижняя и две боковые грани объемной ленты B x H
+                polys.append([p_top_l[s], p_top_r[s], p_top_r[s + 1], p_top_l[s + 1]])
+                polys.append([p_bot_r[s], p_bot_l[s], p_bot_l[s + 1], p_bot_r[s + 1]])
+                polys.append([p_top_r[s], p_bot_r[s], p_bot_r[s + 1], p_top_r[s + 1]])
+                polys.append([p_bot_l[s], p_top_l[s], p_top_l[s + 1], p_bot_l[s + 1]])
+                face_colors.extend([col, col, col, col])
+
+        if polys:
+            coll = Poly3DCollection(polys, facecolors=face_colors, edgecolors="none", alpha=0.88)
+            ax.add_collection3d(coll)
+
+    # Тройные 3D-кресты: серый пунктирный до распада, яркий чёрный/красный для текущих центров
+    arm = 0.14 * L_half
+    if init_centers is not None:
+        for c0 in init_centers:
+            draw_triple_cross_3d(ax, c0, arm * 1.15, color="#555555", lw=1.3, ls="--", alpha=0.75)
+    cur_centers = find_vortex_centers_3d(psi, grid)
+    for idx_c, cc in enumerate(cur_centers):
+        c_col = "#111111" if idx_c == 0 else "#d62728"
+        draw_triple_cross_3d(ax, cc, arm, color=c_col, lw=1.8, ls="-", alpha=0.95)
