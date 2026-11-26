@@ -345,12 +345,12 @@ is_radiative = gif_bc_mode.startswith("2.")
 if make_6_gifs:
     k_life = float(LIFETIME_MULT_K)
     tau_min = min(v for v in PARTICLE_LIFETIMES_S.values() if np.isfinite(v))
+    gifs_6 = []
+    prog_6 = st.progress(0, text="Генерация 3D-лент для 6 частиц...")
+    cross_media = st.session_state.get("cross_media", {})
 
-        gifs_6 = []
-        prog_6 = st.progress(0, text="Генерация 3D-лент для 6 частиц...")
-        cross_media = st.session_state.get("cross_media", {})
+    for idx, (p_name, (m_p, n_p), m_targ, r_targ) in enumerate(FOUND_PARTICLES_BENCHMARK):
 
-        for idx, (p_name, (m_p, n_p), m_targ, r_targ) in enumerate(FOUND_PARTICLES_BENCHMARK):
             tau_p = float(PARTICLE_LIFETIMES_S.get(p_name, 1e-20))
             if np.isfinite(tau_p):
                 steps_p = int(np.clip(180 * ((k_life * tau_p / tau_min) ** 0.06), 180, 900))
