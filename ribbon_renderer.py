@@ -1,3 +1,6 @@
+import matplotlib.pyplot as plt
+from matplotlib import cm, colors
+
 import numpy as np
 from matplotlib import cm, colors
 from mpl_toolkits.mplot3d.art3d import Poly3DCollection
