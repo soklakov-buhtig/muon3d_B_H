@@ -396,7 +396,9 @@ if make_6_gifs:
                 azim_deg=azim_deg, elev_deg=elev_deg,
                 zoom=zoom_val, n_frames=int(n_snap_frames),
             )
-        gifs_6.append((p_name, f"({m_p}, {n_p})", gif_b))
+  #      gifs_6.append((p_name, f"({m_p}, {n_p})", gif_b))
+        gifs_6.append((f"{p_name} [{tau_lbl}]", f"({m_p}, {n_p})", gif_b))
+
     prog_6.progress(1.0, text="Все 6 GIF-анимаций готовы!")
     st.session_state["vortex_gifs_6"] = gifs_6
 
