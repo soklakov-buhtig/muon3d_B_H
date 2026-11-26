@@ -83,37 +83,21 @@ def build_vortex_time_animation(psi, grid, azim_deg=45.0, elev_deg=25.0, zoom=1.
         ),
     )
     return fig
+
 def build_snapshot_history_pngs(psi, grid, azim_deg=45.0, elev_deg=25.0, zoom=1.6, n_frames=16):
-    """
-    Генерирует последовательность статичных растровых PNG-кадров (bytes)
-    эволюции волны во времени с фиксированной камеры (без 3D-вращения WebGL).
-    """
+    """Генерирует PNG-кадры 3D-лент (ширина B, толщина H, цвет u) с тройным крестом центра."""
     import io
     import matplotlib.pyplot as plt
 
-    X, Y, Z = grid["X"], grid["Y"], grid["Z"]
     L_lim = float(grid["L_half"]) / max(float(zoom), 0.3)
-
-    amp = np.abs(psi)
-    u_base = amp ** 2
-    u_thresh = 0.35 * float(np.max(u_base))
-    mask_pts = u_base >= u_thresh
-
-    xs = X[mask_pts]
-    ys = Y[mask_pts]
-    zs = Z[mask_pts]
-    amp_pts = amp[mask_pts]
-    phase_pts = np.angle(psi[mask_pts])
-
+    init_centers = find_vortex_centers_3d(psi, grid)
     png_list = []
+
     for k in range(int(n_frames)):
         phase_t = 2.0 * np.pi * (k / float(n_frames))
-        wave_val = (amp_pts ** 2) * (0.65 + 0.35 * np.cos(phase_pts - phase_t))
-
         fig = plt.figure(figsize=(5.5, 5.0), dpi=110)
         ax = fig.add_subplot(111, projection="3d")
-        ax.scatter(xs, ys, zs, c=wave_val, cmap="turbo", s=14, alpha=0.65, edgecolors="none")
-
+        draw_bh_ribbons_3d(ax, psi, grid, phase_shift=phase_t, init_centers=init_centers)
         ax.set_xlim(-L_lim, L_lim)
         ax.set_ylim(-L_lim, L_lim)
         ax.set_zlim(-L_lim, L_lim)
@@ -123,7 +107,6 @@ def build_snapshot_history_pngs(psi, grid, azim_deg=45.0, elev_deg=25.0, zoom=1.
         ax.set_ylabel("Y (fm)", fontsize=8)
         ax.set_zlabel("Z (fm)", fontsize=8)
         plt.tight_layout()
-
         buf = io.BytesIO()
         fig.savefig(buf, format="png")
         plt.close(fig)
@@ -131,6 +114,8 @@ def build_snapshot_history_pngs(psi, grid, azim_deg=45.0, elev_deg=25.0, zoom=1.
         png_list.append(buf.getvalue())
 
     return png_list
+
+
 def build_vortex_gif(psi, grid, azim_deg=45.0, elev_deg=25.0, zoom=1.6, n_frames=16, fps=12):
     """Собирает готовую зацикленную GIF-анимацию эволюции 3D-узла с фиксированной камеры."""
     import io
