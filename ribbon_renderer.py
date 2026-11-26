@@ -50,40 +50,34 @@ def _interp3d(field, grid, pts):
     return (c00 * (1 - dv) + c10 * dv) * (1 - dw) + (c01 * (1 - dv) + c11 * dv) * dw
 
 def find_vortex_centers_3d(psi, grid, rel_thresh=0.35, max_centers=6):
-    """Находит центр(ы) вихревых сгустков по локальным максимумам плотности энергии u."""
+    """Находит 1 общий центр масс, пока вихрь цельный, или центры каждого осколка после распада."""
     X, Y, Z = grid["X"], grid["Y"], grid["Z"]
     u = np.real(psi * np.conj(psi))
     u_max = float(np.max(u))
     if u_max <= 1e-16:
         return [np.zeros(3)]
 
-    # Если вихрь в целом — проверяем глобальный центр масс плотного ядра
-    core_mask = u >= 0.50 * u_max
-    w_sum = float(np.sum(u[core_mask]))
-    com = np.array([
-        float(np.sum(X[core_mask] * u[core_mask]) / w_sum),
-        float(np.sum(Y[core_mask] * u[core_mask]) / w_sum),
-        float(np.sum(Z[core_mask] * u[core_mask]) / w_sum),
-    ])
+    mask = u >= float(rel_thresh) * u_max
+    if not np.any(mask):
+        return [np.zeros(3)]
 
-    # Поиск локальных пиков сгустков (если вихрь разделился на фрагменты при распаде)
-    local_max = (u == maximum_filter(u, size=5)) & (u >= rel_thresh * u_max)
-    idx = np.argwhere(local_max)
-    if len(idx) <= 1:
-        return [com]
+    # Выделяем связные 3D-области (структура 3x3x3 с диагоналями)
+    labeled, n_comp = label(mask, structure=np.ones((3, 3, 3), dtype=int))
+    comp_masses = []
+    for c_id in range(1, n_comp + 1):
+        c_mask = (labeled == c_id)
+        m_val = float(np.sum(u[c_mask]))
+        if m_val > 0.02 * float(np.sum(u[mask])):
+            cx = float(np.sum(X[c_mask] * u[c_mask]) / m_val)
+            cy = float(np.sum(Y[c_mask] * u[c_mask]) / m_val)
+            cz = float(np.sum(Z[c_mask] * u[c_mask]) / m_val)
+            comp_masses.append((m_val, np.array([cx, cy, cz])))
 
-    vals = [float(u[i, j, k]) for i, j, k in idx]
-    order = np.argsort(vals)[::-1]
-    min_dist = 3.5 * float(grid["dx"])
-    centers = []
-    for o in order:
-        i, j, k = idx[o]
-        pt = np.array([float(X[i, j, k]), float(Y[i, j, k]), float(Z[i, j, k])])
-        if all(np.linalg.norm(pt - c) >= min_dist for c in centers):
-            centers.append(pt)
-        if len(centers) >= max_centers:
-            break
-    return centers if centers else [com]
+    if not comp_masses:
+        return [np.zeros(3)]
+    comp_masses.sort(key=lambda item: item[0], reverse=True)
+    return [c for _, c in comp_masses[:max_centers]]
+
 
 
 def draw_triple_cross_3d(ax, center, arm_len, color="black", lw=1.6, ls="-", alpha=0.95):
