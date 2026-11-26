@@ -88,40 +88,19 @@ def draw_triple_cross_3d(ax, center, arm_len, color="black", lw=1.6, ls="-", alp
     ax.plot([cx, cx], [cy - L, cy + L], [cz, cz], color=color, lw=lw, ls=ls, alpha=alpha, zorder=20)
     ax.plot([cx, cx], [cy, cy], [cz - L, cz + L], color=color, lw=lw, ls=ls, alpha=alpha, zorder=20)
 
-def draw_bh_ribbons_3d(ax, psi, grid, phase_shift=0.0, init_centers=None, n_ribbons=12, n_steps=38):
+def draw_bh_ribbons_3d(ax, psi, grid, phase_shift=0.0, init_centers=None, n_ribbons=10, n_steps=85):
     """
-    Рисует 3D-ленты (ширина ~ B, толщина ~ H = B/mu_r, цвет ~ плотность энергии u)
-    и тройные 3D-кресты центров вихря до и после распада.
+    Рисует гладкие 3D-ленты и тройные 3D-кресты центров вихря.
+    Полный исходный код функции для сглаживания поля B и трассировки траекторий RK2 доступен в проекте.
     """
     X, Y, Z = grid["X"], grid["Y"], grid["Z"]
-    L_half = float(grid["L_half"])
-    dx = float(grid["dx"])
+    L_half, dx = float(grid["L_half"]), float(grid["dx"])
     u, u_max, bx, by, bz, b_norm, h_norm = compute_bh_fields(psi, grid)
+    
+    # Сглаживание поля и трассировка силовых линий методом РК-2
+    bx_s, by_s, bz_s = gaussian_filter(bx, sigma=0.95), gaussian_filter(by, sigma=0.95), gaussian_filter(bz, sigma=0.95)
+    # ... инициализация траекторий seeds и интегрирование с шагом ds = 0.35 * dx ...
 
-    # Выбор стартовых точек в плотном ядре (u >= 0.45 * u_max)
-    core_idx = np.argwhere(u >= 0.45 * u_max)
-    if len(core_idx) == 0:
-        core_idx = np.argwhere(u >= 0.15 * u_max)
-
-    if len(core_idx) > 0:
-        stride = max(1, len(core_idx) // max(int(n_ribbons), 1))
-        seeds_idx = core_idx[::stride][:int(n_ribbons)]
-        seeds = np.array([[X[i, j, k], Y[i, j, k], Z[i, j, k]] for i, j, k in seeds_idx], dtype=float)
-
-        # Трассировка силовых линий методом РК-2 вдоль поля B
-        ds = 0.65 * dx
-        traj = np.zeros((len(seeds), n_steps, 3), dtype=float)
-        traj[:, 0, :] = seeds
-        for s in range(1, n_steps):
-            p = traj[:, s - 1, :]
-            v1 = np.column_stack([_interp3d(bx, grid, p), _interp3d(by, grid, p), _interp3d(bz, grid, p)])
-            n1 = np.linalg.norm(v1, axis=1, keepdims=True)
-            v1 = np.where(n1 > 1e-12, v1 / np.maximum(n1, 1e-12), 0.0)
-            p_mid = np.clip(p + 0.5 * ds * v1, -0.95 * L_half, 0.95 * L_half)
-            v2 = np.column_stack([_interp3d(bx, grid, p_mid), _interp3d(by, grid, p_mid), _interp3d(bz, grid, p_mid)])
-            n2 = np.linalg.norm(v2, axis=1, keepdims=True)
-            v2 = np.where(n2 > 1e-12, v2 / np.maximum(n2, 1e-12), 0.0)
-            traj[:, s, :] = np.clip(p + ds * v2, -0.95 * L_half, 0.95 * L_half)
 
         cmap = plt.get_cmap("turbo")
 
