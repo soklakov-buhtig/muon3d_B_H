@@ -5,6 +5,7 @@ import numpy as np
 from matplotlib import cm, colors
 from mpl_toolkits.mplot3d.art3d import Poly3DCollection
 from scipy.ndimage import maximum_filter
+from scipy.ndimage import gaussian_filter, label
 
 
 def compute_bh_fields(psi, grid):
