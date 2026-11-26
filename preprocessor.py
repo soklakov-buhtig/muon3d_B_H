@@ -1,0 +1,73 @@
+import numpy as np
+
+
+def build_3d_grid(R0_fm, N=48, box_scale=3.5):
+    """
+    Создаёт симметричную 3D-сетку (x, y, z) в фемтометрах и маску открытых граничных условий (open BC).
+    """
+    L_half = float(R0_fm) * float(box_scale)
+    axis = np.linspace(-L_half, L_half, int(N), dtype=np.float64)
+    dx = float(axis[1] - axis[0])
+    X, Y, Z = np.meshgrid(axis, axis, axis, indexing="ij")
+
+    # Плавная сферическая маска затухания у границ куба (open BC: поле -> 0 на границе)
+    r_box = np.sqrt(X**2 + Y**2 + Z**2) / L_half
+    boundary_mask = np.clip(1.0 - np.maximum(0.0, (r_box - 0.72) / 0.28) ** 2, 0.0, 1.0)
+
+    return {
+        "X": X,
+        "Y": Y,
+        "Z": Z,
+        "dx": dx,
+        "dV": dx**3,
+        "L_half": L_half,
+        "boundary_mask": boundary_mask,
+        "alias_scale": 1.0,
+
+    }
+
+
+def init_hopf_vortex_3d(grid, R0_fm, sigma_fm, m_tor, n_pol, amplitude=1.0):
+    """
+    Формирует начальное комплексное 3D-поле тороидально-полоидального вихря Хопфа (m_tor, n_pol).
+    """
+    X, Y, Z = grid["X"], grid["Y"], grid["Z"]
+    mask = grid["boundary_mask"]
+
+    # Тороидальные координаты в 3D
+    rho = np.sqrt(X**2 + Y**2) + 1e-12
+    phi = np.arctan2(Y, X)                          # Тороидальный угол [ -pi, pi ]
+    theta = np.arctan2(Z, rho - R0_fm)              # Полоидальный угол вокруг осевой линии тора
+
+    # Расстояние от каждой точки 3D-пространства до осевой окружности тора радиуса R0_fm
+    dist_to_core = np.sqrt((rho - R0_fm) ** 2 + Z**2)
+
+    # Поперечный профиль амплитуды силовой трубки (исчезает на оси при m_tor*n_pol > 0)
+    core_profile = np.exp(-0.5 * (dist_to_core / max(sigma_fm, 1e-3)) ** 2)
+    alias_scale = max(1.0, max(abs(float(m_tor)), abs(float(n_pol))) / 4.0)
+    grid["alias_scale"] = float(alias_scale)
+    phase = (float(m_tor) / alias_scale) * phi + (float(n_pol) / alias_scale) * theta
+
+    # Топологическая 3D-фаза узла Хопфа: m_tor обходов по большому кольцу + n_pol по малому
+    phase = float(m_tor) * phi + float(n_pol) * theta
+
+    psi = float(amplitude) * core_profile * np.exp(1j * phase) * mask
+
+    # Нормировка по максимуму амплитуды
+    max_amp = np.max(np.abs(psi))
+    if max_amp > 0:
+        psi = psi / max_amp * float(amplitude)
+
+    return psi.astype(np.complex128)
+
+
+def init_noise_field_3d(grid, noise_amp=1e-3, seed=42):
+    """
+    Генерирует слабое шумовое поле вокруг psi = 0 для теста №1 (проверка устойчивости релаксации).
+    """
+    rng = np.random.default_rng(seed)
+    shape = grid["X"].shape
+    real_part = rng.normal(0.0, noise_amp, size=shape)
+    imag_part = rng.normal(0.0, noise_amp, size=shape)
+    psi = (real_part + 1j * imag_part) * grid["boundary_mask"]
+    return psi.astype(np.complex128)
