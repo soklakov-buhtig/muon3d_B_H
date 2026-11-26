@@ -349,10 +349,20 @@ if make_6_gifs:
     prog_6 = st.progress(0, text="Генерация 3D-лент для 6 частиц...")
     cross_media = st.session_state.get("cross_media", {})
 
-    
-    for idx, (p_name, (m_p, n_p), m_targ, r_targ) in enumerate(FOUND_PARTICLES_BENCHMARK):
-#        prog_6.progress(idx / 6.0, text=f"Расчёт и рендер GIF ({idx + 1}/6): {p_name} ({m_p}, {n_p})...")
+        for idx, (p_name, (m_p, n_p), m_targ, r_targ) in enumerate(FOUND_PARTICLES_BENCHMARK):
+        tau_p = float(PARTICLE_LIFETIMES_S.get(p_name, 1e-20))
+        if np.isfinite(tau_p):
+            steps_p = int(np.clip(180 * ((k_life * tau_p / tau_min) ** 0.06), 180, 900))
+            tau_lbl = f"T={k_life:.0f}τ ({k_life * tau_p:.2e} с)"
+        else:
+            steps_p = int(np.clip(360 * (k_life / 5.0), 240, 720))
+            tau_lbl = f"T={k_life:.0f}τ_ref (стабилен)"
         prog_6.progress(idx / 6.0, text=f"Расчёт и рендер GIF ({idx + 1}/6): {p_name} ({m_p}, {n_p}) | {tau_lbl}...")
+
+    
+#    for idx, (p_name, (m_p, n_p), m_targ, r_targ) in enumerate(FOUND_PARTICLES_BENCHMARK):
+#        prog_6.progress(idx / 6.0, text=f"Расчёт и рендер GIF ({idx + 1}/6): {p_name} ({m_p}, {n_p})...")
+#        prog_6.progress(idx / 6.0, text=f"Расчёт и рендер GIF ({idx + 1}/6): {p_name} ({m_p}, {n_p}) | {tau_lbl}...")
 
         scale_r = (2.0 * 3.0) / max(float(m_p * n_p), 1.0)
         r0_p = float(R_E_COMPTON_FM) * scale_r
