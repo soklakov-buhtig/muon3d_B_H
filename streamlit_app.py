@@ -1,6 +1,12 @@
 import streamlit as st
 import numpy as np
 import plotly.graph_objects as go
+from constants import DEFAULT_MEDIUM, DEFAULT_GRID, M_E_MEV, M_MU_MEV, R_E_COMPTON_FM, R_MU_COMPTON_FM
+from constants import (
+    DEFAULT_MEDIUM, DEFAULT_GRID, M_E_MEV, M_MU_MEV,
+    R_E_COMPTON_FM, R_MU_COMPTON_FM,
+    LIFETIME_MULT_K, PARTICLE_LIFETIMES_S,
+)
 
 
 #from calibrate_medium import calibrate_single_and_scan_spectrum
@@ -304,7 +310,7 @@ elif lock_and_animate or make_snapshots:
 
 
 
-n_snap_frames = st.number_input("Количество кадров GIF", min_value=8, max_value=240, value=16, step=8)
+n_snap_frames = st.number_input("Количество кадров GIF", min_value=8, max_value=240, value=36, step=8)
 
 if make_snapshots and "last_3d_run" in st.session_state:
     run_data = st.session_state["last_3d_run"]
