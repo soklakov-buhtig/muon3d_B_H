@@ -358,7 +358,7 @@ if make_6_gifs:
             else:
                 steps_p = int(np.clip(360 * (k_life / 5.0), 240, 720))
                 tau_lbl = f"T={k_life:.0f}τ_ref (стабилен)"
-            prog_6.progress(idx / 6.0, text=f"Расчёт и рендер GIF ({idx + 1}/6): {p_name} ({m_p}, {n_p}) | {tau_lbl}...")
+        prog_6.progress(idx / 6.0, text=f"Расчёт и рендер GIF ({idx + 1}/6): {p_name} ({m_p}, {n_p}) | {tau_lbl}...")
 
     
 #    for idx, (p_name, (m_p, n_p), m_targ, r_targ) in enumerate(FOUND_PARTICLES_BENCHMARK):
